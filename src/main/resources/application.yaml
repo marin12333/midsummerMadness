@@ -1,0 +1,9 @@
+
+
+
+
+spring:
+  application:
+    name: mindsummer
+server:
+  port: 8080
