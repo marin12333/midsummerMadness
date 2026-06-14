@@ -8,7 +8,6 @@ import com.madness.mqmremovemark.model.ExtractionResult;
 import com.madness.mqmremovemark.model.XhsMediaVO;
 import org.springframework.stereotype.Service;
 
-import java.net.BindException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -17,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 
 @Service
 public class XhsMediaService {
@@ -195,4 +195,33 @@ public class XhsMediaService {
         return null;
     }
 
+    // ============================================================
+    //  直接跑 main() 的本地调试入口（不启 Spring）
+    //  两种用法：
+    //    1) IDE 里 Run，不传参 → 用下面 FALLBACK 常量里的样本链接
+    //    2) 命令行 / IDE Run Configuration 里给参数 → 第一个参数当分享文案
+    //  Controller 走的是同一个 extractAllMedia(...)，行为一致。
+    // ============================================================
+    public static void main(String[] args) {
+        String FALLBACK = "65 【普吉岛的夏天 - 今天超开心耶 | 小红书 - 你的生活兴趣社区】 😆 meepyD13i5j0yXJ 😆 https://www.xiaohongshu.com/discovery/item/69f97e400000000036002d3a?source=webshare&xhsshare=pc_web&xsec_token=CBBvtKVHV2IGQeh6OElVh82ThsTM5b9kT6cWyADH-Z7lA=&xsec_source=pc_share";
+        String shareText = (args != null && args.length > 0 && !args[0].isBlank()) ? args[0] : FALLBACK;
+
+        XhsMediaService svc = new XhsMediaService();
+
+        try {
+            XhsMediaVO vo = svc.extractAllMedia(shareText);
+            if (vo == null) {
+                System.err.println("❌ 未在文本中检测到有效的小红书链接");
+                return;
+            }
+            System.out.println("================ 解析成功 ================");
+            System.out.println("--- 图片 (包含静态图 + 视频封面) ---");
+            vo.getImages().forEach(System.out::println);
+            System.out.println("--- 视频 (包含 Live Photo + 主视频) ---");
+            vo.getVideos().forEach(System.out::println);
+            System.out.println("==========================================");
+        } catch (BusinessException e) {
+            System.err.println("❌ 解析失败: [" + e.getErrorCode().getCode() + "] " + e.getMessage());
+        }
+    }
 }

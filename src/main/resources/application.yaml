@@ -1,3 +1,8 @@
 spring:
   application:
     name: mqmremovemark
+
+douyin:
+  # 从浏览器登录抖音后从 DevTools 复制；Cookie 通常几天就会过期，过期后接口会返回 21001
+  cookie: ""
+  user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
