@@ -443,7 +443,9 @@ public class WeiboMediaService {
             }
             response.setStatus(r.code());
             response.setHeader("Accept-Ranges", "bytes");
-            passThroughHeader(r, response, "Content-Type", "application/octet-stream");
+            // Content-Type 矫正：实况图 mov 上游回的是 application/octet-stream，浏览器会当下载而非播放，
+            // 按最终地址扩展名修正成正确 MIME（mov→video/quicktime）
+            response.setHeader("Content-Type", resolveContentType(r));
             passThroughHeader(r, response, "Content-Length", null);
             passThroughHeader(r, response, "Content-Range", null);
             try (InputStream in = r.body().byteStream(); OutputStream out = response.getOutputStream()) {
@@ -452,6 +454,28 @@ public class WeiboMediaService {
         } catch (IOException e) {
             throw new BusinessException(ErrorCode.NETWORK_ERROR, "代理媒体异常: " + e.getMessage());
         }
+    }
+
+    /**
+     * 决定回给前端的 Content-Type：
+     * mov 强制 video/quicktime（实况图能在 &lt;video&gt; 里内联播放）；
+     * 上游已给出明确且非 octet-stream 的类型就沿用；否则按最终地址扩展名兜底。
+     */
+    private String resolveContentType(Response upstream) {
+        // 跟随重定向后的最终地址，签名参数在 query 里，路径才是真实文件名
+        String path = upstream.request().url().encodedPath().toLowerCase();
+        if (path.endsWith(".mov")) return "video/quicktime";
+        String upstreamCt = upstream.header("Content-Type");
+        if (upstreamCt != null && !upstreamCt.isBlank()
+                && !upstreamCt.startsWith("application/octet-stream")) {
+            return upstreamCt;
+        }
+        if (path.endsWith(".mp4")) return "video/mp4";
+        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+        if (path.endsWith(".png")) return "image/png";
+        if (path.endsWith(".gif")) return "image/gif";
+        if (path.endsWith(".webp")) return "image/webp";
+        return upstreamCt != null && !upstreamCt.isBlank() ? upstreamCt : "application/octet-stream";
     }
 
     /** 把上游响应头原样透传给前端；上游缺失时用 fallback（fallback 为 null 则不设） */
